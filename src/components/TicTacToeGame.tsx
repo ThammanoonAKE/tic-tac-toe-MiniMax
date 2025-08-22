@@ -1,9 +1,9 @@
 'use client'
 
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import GameBoard from './GameBoard'
 import AIThinkingPanel from './AIThinkingPanel'
-import { GameState, Player, MinimaxResult, TreeNode } from '@/types/game'
+import { GameState, Player, MinimaxResult, TreeNode, AIThinking } from '@/types/game'
 
 const TicTacToeGame = () => {
   const [gameState, setGameState] = useState<GameState>({
@@ -15,7 +15,7 @@ const TicTacToeGame = () => {
     aiScore: 0
   })
 
-  const [aiThinking, setAiThinking] = useState({
+  const [aiThinking, setAiThinking] = useState<AIThinking>({
     depth: 0,
     nodesEvaluated: 0,
     bestScore: 0,
@@ -26,17 +26,7 @@ const TicTacToeGame = () => {
 
   const [isAiTurn, setIsAiTurn] = useState(false)
 
-  // Auto-trigger AI moves
-  useEffect(() => {
-    if (gameState.currentPlayer === 'O' && !gameState.isGameOver && !isAiTurn) {
-      const timer = setTimeout(() => {
-        makeAiMove()
-      }, 100)
-      return () => clearTimeout(timer)
-    }
-  }, [gameState.currentPlayer, gameState.isGameOver, isAiTurn])
-
-  const checkWinner = (board: (Player | null)[]): Player | null => {
+  const checkWinner = useCallback((board: (Player | null)[]): Player | null => {
     const winPatterns = [
       [0, 1, 2], [3, 4, 5], [6, 7, 8], // rows
       [0, 3, 6], [1, 4, 7], [2, 5, 8], // columns
@@ -51,13 +41,13 @@ const TicTacToeGame = () => {
     }
 
     return null
-  }
+  }, [])
 
-  const isGameComplete = (board: (Player | null)[]): boolean => {
+  const isGameComplete = useCallback((board: (Player | null)[]): boolean => {
     return checkWinner(board) !== null || board.every(cell => cell !== null)
-  }
+  }, [checkWinner])
 
-  const minimax = (board: (Player | null)[], depth: number, isMaximizing: boolean, alpha: number = -Infinity, beta: number = Infinity, moveIndex: number | null = null, buildTree: boolean = false): MinimaxResult => {
+  const minimax = useCallback((board: (Player | null)[], depth: number, isMaximizing: boolean, alpha: number = -Infinity, beta: number = Infinity, moveIndex: number | null = null, buildTree: boolean = false): MinimaxResult => {
     const winner = checkWinner(board)
     const nodeId = `${depth}-${moveIndex !== null ? moveIndex : 'root'}-${isMaximizing ? 'max' : 'min'}`
     
@@ -165,9 +155,9 @@ const TicTacToeGame = () => {
 
       return { score: minEval, bestMove, tree: treeNode }
     }
-  }
+  }, [checkWinner])
 
-  const evaluateAllMoves = (board: (Player | null)[]): number[] => {
+  const evaluateAllMoves = useCallback((board: (Player | null)[]): (number | null)[] => {
     const evaluations = Array(9).fill(null)
     
     for (let i = 0; i < 9; i++) {
@@ -180,9 +170,9 @@ const TicTacToeGame = () => {
     }
     
     return evaluations
-  }
+  }, [minimax])
 
-  const makeAiMove = async () => {
+  const makeAiMove = useCallback(async () => {
     if (gameState.isGameOver || gameState.currentPlayer !== 'O') return
 
     setIsAiTurn(true)
@@ -239,7 +229,17 @@ const TicTacToeGame = () => {
     }))
 
     setIsAiTurn(false)
-  }
+  }, [gameState.isGameOver, gameState.currentPlayer, gameState.board, evaluateAllMoves, isGameComplete, minimax, checkWinner])
+
+  // Auto-trigger AI moves
+  useEffect(() => {
+    if (gameState.currentPlayer === 'O' && !gameState.isGameOver && !isAiTurn) {
+      const timer = setTimeout(() => {
+        makeAiMove()
+      }, 100)
+      return () => clearTimeout(timer)
+    }
+  }, [gameState.currentPlayer, gameState.isGameOver, isAiTurn, makeAiMove])
 
   const handleCellClick = (index: number) => {
     if (gameState.board[index] || gameState.isGameOver || isAiTurn || gameState.currentPlayer !== 'X') {
