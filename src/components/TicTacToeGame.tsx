@@ -47,6 +47,38 @@ const TicTacToeGame = () => {
     return checkWinner(board) !== null || board.every(cell => cell !== null)
   }, [checkWinner])
 
+  const evaluatePosition = useCallback((board: (Player | null)[]): number => {
+    let score = 0
+    
+    const winPatterns = [
+      [0, 1, 2], [3, 4, 5], [6, 7, 8], // rows
+      [0, 3, 6], [1, 4, 7], [2, 5, 8], // columns
+      [0, 4, 8], [2, 4, 6] // diagonals
+    ]
+    
+    for (const pattern of winPatterns) {
+      const [a, b, c] = pattern
+      const line = [board[a], board[b], board[c]]
+      const oCount = line.filter(cell => cell === 'O').length
+      const xCount = line.filter(cell => cell === 'X').length
+      const emptyCount = line.filter(cell => cell === null).length
+      
+      // O advantages (AI maximizing)
+      if (xCount === 0) {
+        if (oCount === 2 && emptyCount === 1) score += 5
+        else if (oCount === 1 && emptyCount === 2) score += 1
+      }
+      
+      // X advantages (human minimizing)
+      if (oCount === 0) {
+        if (xCount === 2 && emptyCount === 1) score -= 5
+        else if (xCount === 1 && emptyCount === 2) score -= 1
+      }
+    }
+    
+    return score
+  }, [])
+
   const minimax = useCallback((board: (Player | null)[], depth: number, isMaximizing: boolean, alpha: number = -Infinity, beta: number = Infinity, moveIndex: number | null = null, buildTree: boolean = false): MinimaxResult => {
     const winner = checkWinner(board)
     const nodeId = `${depth}-${moveIndex !== null ? moveIndex : 'root'}-${isMaximizing ? 'max' : 'min'}`
@@ -71,6 +103,10 @@ const TicTacToeGame = () => {
     } else if (board.every(cell => cell !== null)) {
       score = 0
       gameResult = 'draw'
+    } else if (depth >= 2) {
+      // Limit depth to 2 levels - use heuristic evaluation
+      score = evaluatePosition(board)
+      gameResult = 'draw' // Mark as terminal to prevent further recursion
     } else {
       score = isMaximizing ? -Infinity : Infinity
     }
@@ -80,15 +116,14 @@ const TicTacToeGame = () => {
       id: nodeId,
       move: moveIndex,
       score: score,
-      depth,
       isMaximizing,
       board: [...board],
       children: [],
       isLeaf: gameResult !== 'ongoing',
-      gameResult
+      gameResult: gameResult !== 'ongoing' ? gameResult as 'win' | 'lose' | 'draw' : undefined
     } : undefined
 
-    // Terminal node
+    // Terminal node (includes depth limit)
     if (gameResult !== 'ongoing') {
       return { score, bestMove: -1, tree: treeNode }
     }
@@ -208,7 +243,7 @@ const TicTacToeGame = () => {
         `Evaluated ${prev.nodesEvaluated} nodes`,
         `Best move: position ${result.bestMove + 1}`,
         `Expected score: ${result.score}`,
-        'Minimax tree generated'
+        'Analysis complete'
       ]
     }))
 
@@ -308,32 +343,45 @@ const TicTacToeGame = () => {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center">
-      <div className="container mx-auto max-w-[1600px] px-4">
-        <div className="flex flex-col xl:flex-row gap-10 items-start justify-center">
-          {/* Game Section */}
-          <div className="flex-shrink-0">
-            <div className="bg-gray-800 rounded-2xl border border-gray-700 shadow-xl p-8 w-full max-w-2xl">
-              <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white text-center mb-8 tracking-wider">
-                Tic Tac Toe
-              </h1>
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 relative overflow-hidden">
+      {/* Background Effects */}
+      <div 
+        className="absolute inset-0 animate-pulse opacity-50"
+        style={{
+          backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Ccircle cx='30' cy='30' r='2'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
+        }}
+      ></div>
+      
+      <div className="relative z-10 min-h-screen flex items-center justify-center p-4">
+        <div className="container mx-auto max-w-[1600px]">
+          <div className="flex flex-col xl:flex-row gap-8 items-start justify-center">
+            {/* Game Section */}
+            <div className="flex-shrink-0 relative animate-slide-in-left">
+              <div className="bg-gradient-to-br from-white/10 via-white/5 to-transparent backdrop-blur-xl rounded-3xl border border-white/20 shadow-2xl shadow-purple-500/20 p-20 w-full max-w-7xl relative overflow-hidden hover-lift">
+                {/* Glassmorphism overlay */}
+                <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-black/10 rounded-3xl"></div>
+                
+                <div className="relative z-10">
+                  <h1 className="text-5xl md:text-6xl lg:text-7xl font-black gradient-text text-center mb-12 tracking-tight drop-shadow-2xl animate-float">
+                    Tic Tac Toe
+                  </h1>
             
               <div className="flex flex-col sm:flex-row justify-between items-center mb-12 gap-8">
-                <div>
-                  <span className="text-base text-gray-300">Current Player: </span>
-                  <span className="font-bold text-xl text-white">
-                    {isAiTurn ? 'AI (O)' : gameState.currentPlayer === 'X' ? 'You (X)' : 'AI (O)'}
+                <div className="animate-scale-in">
+                  <span className="text-base text-white/80 font-medium">Current Player: </span>
+                  <span className="font-black text-xl bg-gradient-to-r from-cyan-400 to-purple-400 bg-clip-text text-transparent">
+                    {isAiTurn ? '🤖 AI (O)' : gameState.currentPlayer === 'X' ? '👤 You (X)' : '🤖 AI (O)'}
                   </span>
                 </div>
                 
-                <div className="flex gap-8 text-center">
-                  <div>
-                    <div className="text-sm text-blue-400 mb-1">Player</div>
-                    <div className="font-bold text-2xl text-blue-300">{gameState.playerScore}</div>
+                <div className="flex gap-4 text-center">
+                  <div className="animate-stagger-1 animate-scale-in">
+                    <div className="text-sm text-cyan-300 mb-2 font-semibold">👤 Player</div>
+                    <div className="font-black text-3xl text-cyan-400 tabular-nums">{gameState.playerScore}</div>
                   </div>
-                  <div>
-                    <div className="text-sm text-red-400 mb-1">AI</div>
-                    <div className="font-bold text-2xl text-red-300">{gameState.aiScore}</div>
+                  <div className="animate-stagger-2 animate-scale-in">
+                    <div className="text-sm text-pink-300 mb-2 font-semibold">🤖 AI</div>
+                    <div className="font-black text-3xl text-pink-400 tabular-nums">{gameState.aiScore}</div>
                   </div>
                 </div>
               </div>
@@ -349,21 +397,26 @@ const TicTacToeGame = () => {
               <div className="flex gap-4 mt-12 justify-center">
                 <button
                   onClick={resetGame}
-                  className="bg-gray-600 hover:bg-gray-500 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl text-base"
+                  className="group bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700 text-white font-bold py-4 px-8 rounded-2xl transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-2xl shadow-purple-500/25 backdrop-blur-sm border border-white/10 relative overflow-hidden morph-button hover-lift animate-stagger-3 animate-scale-in"
                 >
-                  🔄 Reset Game
+                  <span className="absolute inset-0 bg-gradient-to-r from-white/20 to-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-2xl"></span>
+                  <span className="relative flex items-center gap-2 text-lg">🔄 Reset Game</span>
                 </button>
                 <button
                   onClick={newGame}
-                  className="bg-gray-600 hover:bg-gray-500 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl text-base"
+                  className="group bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-bold py-4 px-8 rounded-2xl transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-2xl shadow-emerald-500/25 backdrop-blur-sm border border-white/10 relative overflow-hidden morph-button hover-lift animate-stagger-4 animate-scale-in"
                 >
-                  ✨ New Game
+                  <span className="absolute inset-0 bg-gradient-to-r from-white/20 to-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-2xl"></span>
+                  <span className="relative flex items-center gap-2 text-lg">✨ New Game</span>
                 </button>
               </div>
 
               <div className="mt-8 text-center">
-                <div className="bg-gray-700 rounded-xl px-6 py-4 border border-gray-600 inline-block shadow-sm">
-                  <span className="text-white font-semibold text-lg">
+                <div className="bg-gradient-to-r from-white/10 to-white/5 backdrop-blur-sm rounded-2xl px-8 py-6 border border-white/20 inline-block shadow-xl relative overflow-hidden">
+                  {isAiTurn && (
+                    <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 via-purple-500/20 to-pink-500/20 animate-pulse"></div>
+                  )}
+                  <span className="relative text-white font-bold text-xl bg-gradient-to-r from-white to-white/80 bg-clip-text">
                     {gameState.isGameOver 
                       ? gameState.winner 
                         ? `${gameState.winner === 'X' ? '🎉 You Win!' : '🤖 AI Wins!'}`
@@ -377,15 +430,17 @@ const TicTacToeGame = () => {
                   </span>
                 </div>
               </div>
+                </div>
+              </div>
             </div>
-          </div>
 
-          {/* AI Thinking Panel */}
-          <div className="flex-shrink-0 w-full xl:w-[600px] 2xl:w-[700px]">
-            <AIThinkingPanel 
-              aiThinking={aiThinking}
-              isAiTurn={isAiTurn}
-            />
+            {/* AI Thinking Panel */}
+            <div className="flex-shrink-0 w-full xl:w-[600px] 2xl:w-[700px] animate-slide-in-right animate-stagger-5">
+              <AIThinkingPanel 
+                aiThinking={aiThinking}
+                isAiTurn={isAiTurn}
+              />
+            </div>
           </div>
         </div>
       </div>

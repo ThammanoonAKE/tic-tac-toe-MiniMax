@@ -29,31 +29,62 @@ const GameBoard = ({ board, onCellClick, winner, isGameOver, disabled }: GameBoa
   const winningPattern = winner ? getWinningPattern() : []
 
   return (
-    <div className="grid grid-cols-3 gap-6 w-fit mx-auto mb-12 px-8 bg-transparent">
-      {board.map((cell, index) => {
-        const isWinningCell = winningPattern.includes(index)
+    <div className="flex justify-center items-center">
+      {/* Game Board Grid */}
+      <div className="grid grid-cols-3 gap-4 mb-12 relative">
         
-        return (
-          <button
-            key={index}
-            onClick={() => onCellClick(index)}
-            disabled={disabled || cell !== null || isGameOver}
-            className={`
-              w-24 h-24 sm:w-28 sm:h-28 lg:w-32 lg:h-32 bg-gray-700 hover:bg-gray-600 
-              rounded-xl border-2 border-gray-600 hover:border-gray-500
-              text-3xl sm:text-4xl lg:text-5xl font-bold
-              transition-all duration-300 transform hover:scale-105 active:scale-95
-              disabled:hover:scale-100 disabled:cursor-not-allowed
-              flex items-center justify-center
-              shadow-lg hover:shadow-xl
-              ${isWinningCell ? 'bg-green-800 border-green-500 shadow-green-900/50' : ''}
-              ${cell === 'X' ? 'text-blue-300' : cell === 'O' ? 'text-red-300' : 'text-gray-500'}
-            `}
-          >
-            {cell}
-          </button>
-        )
-      })}
+        {board.map((cell, index) => {
+          const isWinningCell = winningPattern.includes(index)
+          
+          return (
+            <button
+              key={index}
+              onClick={() => onCellClick(index)}
+              disabled={disabled || cell !== null || isGameOver}
+              className={`
+                relative group w-20 h-20 sm:w-24 sm:h-24 lg:w-28 lg:h-28 
+                bg-gradient-to-br from-white/10 via-white/5 to-transparent 
+                hover:from-white/20 hover:via-white/10 hover:to-white/5
+                backdrop-blur-sm rounded-2xl border-2 border-white/20 
+                hover:border-white/40 transition-all duration-300 
+                transform hover:scale-110 active:scale-95 hover:-translate-y-1
+                disabled:hover:scale-100 disabled:hover:translate-y-0 
+                disabled:cursor-not-allowed flex items-center justify-center
+                shadow-lg hover:shadow-2xl relative overflow-hidden
+                ${isWinningCell ? 
+                  'bg-gradient-to-br from-emerald-400/20 via-green-400/20 to-emerald-600/20 border-emerald-400/50 shadow-emerald-500/50 animate-pulse' : 
+                  ''
+                }
+              `}
+            >
+              {/* Hover effect overlay */}
+              <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-2xl"></div>
+              
+              {/* Cell content */}
+              <span className={`
+                relative z-10 text-4xl sm:text-5xl lg:text-6xl font-black 
+                transition-all duration-300 transform group-hover:scale-110
+                ${cell === 'X' ? 
+                  'text-transparent bg-gradient-to-br from-cyan-400 via-blue-500 to-cyan-600 bg-clip-text drop-shadow-lg' : 
+                  cell === 'O' ? 
+                    'text-transparent bg-gradient-to-br from-pink-400 via-red-500 to-pink-600 bg-clip-text drop-shadow-lg' : 
+                    'text-white/30'
+                }
+                ${isWinningCell ? 'animate-bounce' : ''}
+              `}>
+                {cell || ''}
+              </span>
+              
+              {/* Winning cell sparkle effect */}
+              {isWinningCell && (
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                  <div className="w-full h-full bg-gradient-to-br from-emerald-400/20 via-transparent to-emerald-400/20 rounded-2xl animate-ping"></div>
+                </div>
+              )}
+            </button>
+          )
+        })}
+      </div>
     </div>
   )
 }

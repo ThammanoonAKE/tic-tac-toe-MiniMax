@@ -19,12 +19,11 @@ export interface TreeNode {
   id: string
   move: number | null
   score: number
-  depth: number
   isMaximizing: boolean
   board: (Player | null)[]
   children: TreeNode[]
   isLeaf: boolean
-  gameResult: 'win' | 'lose' | 'draw' | 'ongoing'
+  gameResult?: 'win' | 'lose' | 'draw'
 }
 
 export interface AIThinking {
