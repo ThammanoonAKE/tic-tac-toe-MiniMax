@@ -38,7 +38,7 @@ The AI uses the **Minimax algorithm** with the following optimizations:
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/yourusername/tic-tac-toe-minimax.git
+git clone https://github.com/ThammanoonAKE/tic-tac-toe-minimax.git
 cd tic-tac-toe-minimax
 ```
 
